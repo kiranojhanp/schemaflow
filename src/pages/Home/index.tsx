@@ -13,10 +13,7 @@ export function Home() {
       direction="horizontal"
       className="h-full w-full !flex-col md:!flex-row"
     >
-      <ResizablePanel
-        defaultSize={30}
-        onResize={_.debounce(() => console.log("resize done"), 1000)}
-      >
+      <ResizablePanel defaultSize={30}>
         <div className="flex items-center justify-center h-full">
           <DBMLEditor />
         </div>

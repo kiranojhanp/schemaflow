@@ -1,93 +1,67 @@
-import React, { useEffect, useState } from "react";
-import Database from "@dbml/core/types/model_structure/database";
-import { Editor } from "@monaco-editor/react";
-import * as monaco from "monaco-editor";
-
-import { exporter, importer, Parser } from "@dbml/core";
-import ErrorFmt, { ExportFormat, ImportFormat } from "@/services/dbml";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-
 import * as _ from "lodash-es";
-import { CompilerError } from "@dbml/core/types/parse/error";
-
-import { StartupCode } from "./constant";
+import React, { useCallback, useEffect } from "react";
+import { Editor, OnMount } from "@monaco-editor/react";
 import { formatDiagnosticsForMonaco } from "@/services/editor/monaco-error";
-const DEFAULT_BUILD_DELAY = 2000;
+import { EDITOR_CONFIG, EDITOR_OPTIONS, StartupCode } from "./constant";
 
-const formatOptions = [
-  { value: "mysql", label: "MySQL" },
-  { value: "postgres", label: "Postgres" },
-  { value: "dbml", label: "DBML" },
-  { value: "mssql", label: "MSSQL" },
-  { value: "oracle", label: "Oracle" },
-  { value: "json", label: "JSON" },
-] as const;
+import { CompilerError } from "@dbml/core/types/parse/error";
+import { useDBMLStore } from "@/pages/Home/store";
 
 const DBMLEditor: React.FC = () => {
-  const parser = new Parser();
-  const initialDatabase = parser.parse(StartupCode, "dbmlv2") as Database;
+  const { setCode, setEditorModel, parseDBML, setMarkers } = useDBMLStore();
 
-  // State
-  const [code, setCode] = useState(StartupCode);
-  const [database, setDatabase] = useState<Database>(initialDatabase);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    try {
-      const newDB = parser.parse(code, "dbmlv2") as Database;
-      setDatabase(newDB);
-      setError(null);
-
-      // Clear markers within useEffect when no errors
-      monaco.editor.getModels().forEach((model) => {
-        monaco.editor.setModelMarkers(model, "owner", []);
-      });
-    } catch (e) {
-      if (e as CompilerError) {
-        setError(ErrorFmt(e as CompilerError)); // Set error string for display purposes
-        const markers = formatDiagnosticsForMonaco(e as CompilerError);
-        monaco.editor.getModels().forEach((model) => {
-          monaco.editor.setModelMarkers(model, "owner", markers);
-        });
-      } else if (e instanceof Error) {
-        setError(e.message);
+  // Error handling utility
+  const handleParserError = useCallback(
+    (error: unknown) => {
+      if (error as CompilerError) {
+        const markers = formatDiagnosticsForMonaco(error as CompilerError);
+        setMarkers(markers);
+      } else if (error instanceof Error) {
+        console.error("DBML Parser Error:", error.message);
       } else {
-        throw e;
+        console.error("Unknown error:", error);
       }
-    }
-  }, [code]);
+    },
+    [setMarkers]
+  );
 
-  useEffect(() => (!!error ? console.log(error) : () => {}), [error]);
+  // Editor mount handler
+  const handleEditorMount: OnMount = useCallback(
+    (editor) => {
+      setEditorModel(editor.getModel());
+    },
+    [setEditorModel]
+  );
+
+  // Code change handler with debounce
+  const handleCodeChange = useCallback(
+    _.debounce((newValue: string | undefined) => {
+      const updatedCode = newValue || "";
+      setCode(updatedCode);
+      const result = parseDBML(updatedCode);
+      if (!result.success) {
+        handleParserError(result.error);
+      }
+    }, EDITOR_CONFIG.BUILD_DELAY),
+    [parseDBML, setCode, handleParserError]
+  );
+
+  // Cleanup debounced function on unmount
+  useEffect(() => {
+    return () => {
+      handleCodeChange.cancel();
+    };
+  }, [handleCodeChange]);
 
   return (
     <Editor
-      onMount={() => setDatabase(initialDatabase)}
-      onChange={_.debounce(
-        (newValue: string | undefined) => setCode(newValue || ""),
-        DEFAULT_BUILD_DELAY
-      )}
+      onMount={handleEditorMount}
+      onChange={handleCodeChange}
       className="flex-1"
-      defaultLanguage="dbml"
+      defaultLanguage={EDITOR_CONFIG.LANGUAGE}
       defaultValue={StartupCode}
-      theme="one-dark-pro"
-      options={{
-        selectOnLineNumbers: true,
-        minimap: { enabled: false },
-        bracketPairColorization: { enabled: true },
-        automaticLayout: true,
-        scrollBeyondLastLine: false,
-        padding: { top: 10, bottom: 70 },
-        suggest: {
-          showFields: false,
-          showFunctions: false,
-        },
-        wordWrap: "on",
-        scrollbar: {
-          vertical: "hidden",
-          horizontal: "hidden",
-        },
-      }}
+      theme={EDITOR_CONFIG.THEME}
+      options={EDITOR_OPTIONS}
     />
   );
 };

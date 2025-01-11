@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@dbml/core": "3.9.5",
+    "@monaco-editor/react": "4.6.0",
     "react": "19.0.0",
     "react-dom": "19.0.0"
   },

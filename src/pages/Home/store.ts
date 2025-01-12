@@ -1,8 +1,4 @@
 import { create } from "zustand";
-import { Parser } from "@dbml/core";
-import Database from "@dbml/core/types/model_structure/database";
-import * as monaco from "monaco-editor";
-import { StartupCode } from "@/components/editor/constant";
 import {
   Node,
   Edge,
@@ -15,7 +11,15 @@ import {
   ConnectionLineType,
   MarkerType,
   ColorMode,
+  FitView,
 } from "@xyflow/react";
+import Database from "@dbml/core/types/model_structure/database";
+import * as monaco from "monaco-editor";
+import { StartupCode } from "@/components/editor/constant";
+import { getStorageKey } from "@/components/viewer/helpers/localstorage";
+import { getLayoutedElements } from "@/components/viewer/helpers/dbml-flow";
+
+import { Parser } from "@dbml/core";
 import Ref from "@dbml/core/types/model_structure/ref";
 
 interface DBMLState {
@@ -58,6 +62,9 @@ interface DBMLState {
   onEdgesChange: (changes: EdgeChange[]) => void;
   onConnect: (connection: Connection) => void;
   persistPositions: (storageKey: string) => void;
+  onLayout: (direction: string, fitView: FitView) => void;
+  handleNodesChange: (changes: NodeChange[]) => void;
+  loadSavedPositions: (storageKey: string) => any;
 }
 
 const parser = new Parser();
@@ -165,6 +172,37 @@ export const useDBMLStore = create<DBMLState>((set, get) => ({
       {}
     );
     localStorage.setItem(storageKey, JSON.stringify(positions));
+  },
+
+  onLayout: (direction, fitView) => {
+    const { nodes: initialNodes, edges: initialEdges } =
+      parseDatabaseToReactFlow(get().database!);
+
+    const savedPositions = get().loadSavedPositions(
+      getStorageKey(get().database!)
+    );
+
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      initialNodes,
+      initialEdges,
+      savedPositions,
+      direction
+    );
+
+    get().setNodes(layoutedNodes);
+    get().setEdges(layoutedEdges);
+
+    setTimeout(() => fitView({ padding: 0.2 }), 0);
+  },
+
+  handleNodesChange: (changes) => {
+    get().onNodesChange(changes);
+    get().persistPositions(getStorageKey(get().database!));
+  },
+
+  loadSavedPositions: (storageKey) => {
+    const savedPositions = localStorage.getItem(storageKey);
+    return savedPositions ? JSON.parse(savedPositions) : {};
   },
 }));
 

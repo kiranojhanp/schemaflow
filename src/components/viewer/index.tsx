@@ -13,8 +13,6 @@ import {
   Node,
   NodeChange,
   ControlButton,
-  Panel,
-  ColorMode,
 } from "@xyflow/react";
 import dagre from "@dagrejs/dagre";
 import { useDBMLStore } from "@/pages/Home/store";
@@ -23,9 +21,6 @@ import { getSavedPositions, getStorageKey } from "./helpers/localstorage";
 
 import Database from "@dbml/core/types/model_structure/database";
 import Ref from "@dbml/core/types/model_structure/ref";
-
-import "@xyflow/react/dist/base.css";
-import "@xyflow/react/dist/style.css";
 
 const dagreGraph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 const nodeWidth = 200;
@@ -41,7 +36,6 @@ const ERViewer: React.FC = () => {
     database,
     nodes,
     edges,
-    setColorMode,
     setNodes,
     setEdges,
     onNodesChange,
@@ -109,16 +103,6 @@ const ERViewer: React.FC = () => {
         className="bg-gray-50"
       >
         <Background variant={BackgroundVariant.Lines} />
-        <Panel position="top-right">
-          <select
-            onChange={(evt) => setColorMode(evt.target.value as ColorMode)}
-            data-testid="colormode-select"
-          >
-            <option value="dark">dark</option>
-            <option value="light">light</option>
-            <option value="system">system</option>
-          </select>
-        </Panel>
         <Controls
           orientation="horizontal"
           position="bottom-center"

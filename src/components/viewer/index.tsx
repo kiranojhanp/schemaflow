@@ -13,6 +13,8 @@ import {
   Node,
   NodeChange,
   ControlButton,
+  Panel,
+  ColorMode,
 } from "@xyflow/react";
 import dagre from "@dagrejs/dagre";
 import { useDBMLStore } from "@/pages/Home/store";
@@ -35,9 +37,11 @@ const nodeTypes = {
 
 const ERViewer: React.FC = () => {
   const {
+    colorMode,
     database,
     nodes,
     edges,
+    setColorMode,
     setNodes,
     setEdges,
     onNodesChange,
@@ -89,6 +93,7 @@ const ERViewer: React.FC = () => {
   return (
     <div className="w-full h-full">
       <ReactFlow
+        colorMode={colorMode}
         nodes={nodes}
         edges={edges}
         onNodesChange={handleNodesChange}
@@ -104,6 +109,16 @@ const ERViewer: React.FC = () => {
         className="bg-gray-50"
       >
         <Background variant={BackgroundVariant.Lines} />
+        <Panel position="top-right">
+          <select
+            onChange={(evt) => setColorMode(evt.target.value as ColorMode)}
+            data-testid="colormode-select"
+          >
+            <option value="dark">dark</option>
+            <option value="light">light</option>
+            <option value="system">system</option>
+          </select>
+        </Panel>
         <Controls
           orientation="horizontal"
           position="bottom-center"

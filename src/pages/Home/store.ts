@@ -14,10 +14,14 @@ import {
   addEdge,
   ConnectionLineType,
   MarkerType,
+  ColorMode,
 } from "@xyflow/react";
 import Ref from "@dbml/core/types/model_structure/ref";
 
 interface DBMLState {
+  // common theme
+  colorMode: ColorMode;
+
   // DBML Editor state
   code: string;
   database: Database | null;
@@ -31,6 +35,7 @@ interface DBMLState {
   // Actions
   setCode: (code: string) => void;
   setEditorModel: (model: monaco.editor.ITextModel | null) => void;
+  setColorMode: (mode: ColorMode) => void;
   parseDBML: (code: string) =>
     | {
         success: boolean;
@@ -64,6 +69,7 @@ export const useDBMLStore = create<DBMLState>((set, get) => ({
   database: initialDatabase,
   editorModel: null,
   parser: parser,
+  colorMode: "light",
   nodes: [],
   edges: [],
 
@@ -71,6 +77,8 @@ export const useDBMLStore = create<DBMLState>((set, get) => ({
   setCode: (code) => set({ code }),
 
   setEditorModel: (model) => set({ editorModel: model }),
+
+  setColorMode: (mode) => set({ colorMode: mode }),
 
   parseDBML: (code) => {
     try {

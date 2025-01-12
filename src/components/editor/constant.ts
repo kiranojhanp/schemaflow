@@ -43,7 +43,7 @@ export const EDITOR_OPTIONS: monaco.editor.IStandaloneEditorConstructionOptions 
     showFields: false,
     showFunctions: false,
   },
-  wordWrap: "on",
+  wordWrap: "off",
   scrollbar: {
     vertical: "hidden",
     horizontal: "hidden",

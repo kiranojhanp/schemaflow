@@ -11,10 +11,10 @@ import {
   ControlButton,
 } from "@xyflow/react";
 import { useDBMLStore } from "@/pages/Home/store";
-import TableNode from "./TableNode";
+import { DatabaseSchemaNode } from "@/components/database-schema-node";
 
 const nodeTypes = {
-  tableNode: TableNode,
+  databaseSchema: DatabaseSchemaNode,
 };
 
 const ERViewer: React.FC = () => {

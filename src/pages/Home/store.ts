@@ -198,14 +198,11 @@ export const useDBMLStore = create<DBMLState>((set, get) => ({
  * Converts a DBML database structure into React Flow nodes and edges
  */
 const parseDatabaseToReactFlow = (database: Database) => {
-  const nodes: Node[] = [];
+  const nodes: Node<{
+    label: string;
+    schema: { title: string; type: string }[];
+  }>[] = [];
   const edges: Edge[] = [];
-
-  // Helper to find primary key field
-  const findPrimaryKeyField = (table: any) => {
-    const pkField = table.fields.find((field: any) => field.pk);
-    return pkField ? pkField.name : "id";
-  };
 
   // Process each schema in the database
   database.schemas.forEach((schema) => {
@@ -213,48 +210,31 @@ const parseDatabaseToReactFlow = (database: Database) => {
     schema.tables.forEach((table) => {
       nodes.push({
         id: table.name,
-        type: "tableNode",
+        type: "databaseSchema",
+        position: { x: 0, y: nodes.length * 150 },
         draggable: true,
         data: {
           label: table.name,
-          fields: table.fields.map((field) => ({
-            name: field.name,
+          schema: table.fields.map((field) => ({
+            title: field.name,
             type: field.type.type_name,
             isPrimary: field.pk,
           })),
         },
-        position: { x: 0, y: nodes.length * 150 },
       });
     });
 
     // Create edges for relationships
-    schema.refs?.forEach((ref: Ref, index) => {
+    schema.refs?.forEach((ref: Ref) => {
       const source = ref.endpoints[0];
       const target = ref.endpoints[1];
 
-      const sourceTable = schema.tables.find(
-        (t) => t.name === source.tableName
-      );
-      const targetTable = schema.tables.find(
-        (t) => t.name === target.tableName
-      );
-
-      if (!sourceTable || !targetTable) return;
-
-      const targetPkField = findPrimaryKeyField(targetTable);
-      const foreignKeyField =
-        sourceTable.fields.find(
-          (f: any) =>
-            f.name.toLowerCase() === `${targetTable.name.toLowerCase()}_id` ||
-            f.name.toLowerCase() === targetPkField.toLowerCase()
-        )?.name || targetPkField;
-
       edges.push({
-        id: `edge-${index}`,
+        id: `${source.tableName}-${target.tableName}`,
         source: source.tableName,
         target: target.tableName,
-        sourceHandle: `${foreignKeyField}-source`,
-        targetHandle: `${targetPkField}-target`,
+        sourceHandle: source.fieldNames[0],
+        targetHandle: target.fieldNames[1],
         type: "smoothstep",
         animated: false,
         markerEnd: MarkerType.ArrowClosed,

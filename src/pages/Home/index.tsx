@@ -7,23 +7,24 @@ import {
 import Viewer from "@/components/viewer";
 
 import * as _ from "lodash-es";
+import { useDBMLStore } from "./store";
+import { getStorageKey } from "@/components/viewer/helpers/localstorage";
 
 export function Home() {
+  const { database } = useDBMLStore();
+
   return (
     <ResizablePanelGroup
       direction="horizontal"
       className="h-full w-full !flex-col md:!flex-row"
+      autoSaveId={getStorageKey(database!)}
     >
       <ResizablePanel defaultSize={30}>
-        <div className="flex items-center justify-center h-full">
-          <DBMLEditor />
-        </div>
+        <DBMLEditor />
       </ResizablePanel>
       <ResizableHandle withHandle className="hidden md:flex" />
       <ResizablePanel defaultSize={70}>
-        <div className="flex items-center justify-center h-full">
-          <Viewer  />
-        </div>
+        <Viewer />
       </ResizablePanel>
     </ResizablePanelGroup>
   );

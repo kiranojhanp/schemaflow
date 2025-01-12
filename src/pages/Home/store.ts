@@ -3,59 +3,46 @@ import {
   Node,
   Edge,
   Connection,
-  applyNodeChanges,
-  NodeChange,
-  EdgeChange,
-  applyEdgeChanges,
-  addEdge,
   ConnectionLineType,
   MarkerType,
   ColorMode,
   FitView,
+  applyNodeChanges,
+  applyEdgeChanges,
+  addEdge,
+  NodeChange,
+  EdgeChange,
 } from "@xyflow/react";
+import { Parser } from "@dbml/core";
 import Database from "@dbml/core/types/model_structure/database";
+import Ref from "@dbml/core/types/model_structure/ref";
 import * as monaco from "monaco-editor";
 import { StartupCode } from "@/components/editor/constant";
 import { getStorageKey } from "@/components/viewer/helpers/localstorage";
 import { getLayoutedElements } from "@/components/viewer/helpers/dbml-flow";
 
-import { Parser } from "@dbml/core";
-import Ref from "@dbml/core/types/model_structure/ref";
-
 interface DBMLState {
-  // common theme
-  colorMode: ColorMode;
-
-  // DBML Editor state
+  // Editor State
   code: string;
   database: Database | null;
   editorModel: monaco.editor.ITextModel | null;
   parser: Parser;
+  colorMode: ColorMode;
 
-  // Flow Viewer state
+  // Flow Viewer State
   nodes: Node[];
   edges: Edge[];
 
-  // Actions
+  // Editor Actions
   setCode: (code: string) => void;
   setEditorModel: (model: monaco.editor.ITextModel | null) => void;
   setColorMode: (mode: ColorMode) => void;
-  parseDBML: (code: string) =>
-    | {
-        success: boolean;
-        database?: Database;
-        error?: undefined;
-      }
-    | {
-        success: boolean;
-        error: unknown;
-        database?: undefined;
-      };
+  parseDBML: (code: string) => ParseResult;
   setMarkers: (markers: monaco.editor.IMarkerData[]) => void;
   clearMarkers: () => void;
   updateViewerFromDatabase: (database: Database) => void;
 
-  // Flow actions
+  // Flow Actions
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
   onNodesChange: (changes: NodeChange[]) => void;
@@ -67,11 +54,19 @@ interface DBMLState {
   loadSavedPositions: (storageKey: string) => any;
 }
 
+// Helper type for parse results
+type ParseResult =
+  | { success: true; database: Database }
+  | { success: false; error: unknown };
+
+// =============== Store Implementation ===============
+
+// Initialize parser and default database
 const parser = new Parser();
 const initialDatabase = parser.parse(StartupCode, "dbmlv2") as Database;
 
 export const useDBMLStore = create<DBMLState>((set, get) => ({
-  // Initial state
+  // -------- Initial State --------
   code: StartupCode,
   database: initialDatabase,
   editorModel: null,
@@ -80,20 +75,20 @@ export const useDBMLStore = create<DBMLState>((set, get) => ({
   nodes: [],
   edges: [],
 
-  // DBML actions
+  // -------- Editor Actions --------
   setCode: (code) => set({ code }),
-
   setEditorModel: (model) => set({ editorModel: model }),
-
   setColorMode: (mode) => set({ colorMode: mode }),
 
   parseDBML: (code) => {
     try {
       const parser = get().parser;
       const newDB = parser.parse(code, "dbmlv2") as Database;
+
       set({ database: newDB });
       get().clearMarkers();
-      get().updateViewerFromDatabase(newDB); // Update viewer when database changes
+      get().updateViewerFromDatabase(newDB);
+
       return { success: true, database: newDB };
     } catch (error) {
       return { success: false, error };
@@ -103,22 +98,21 @@ export const useDBMLStore = create<DBMLState>((set, get) => ({
   updateViewerFromDatabase: (database: Database) => {
     if (!database) return;
 
+    // Get initial layout
     const { nodes: initialNodes, edges: initialEdges } =
       parseDatabaseToReactFlow(database);
 
-    // Preserve existing node positions when updating
+    // Preserve existing node positions
     const currentNodes = get().nodes;
     const nodesWithPositions = initialNodes.map((node: Node) => {
       const existingNode = currentNodes.find((n) => n.id === node.id);
       return existingNode ? { ...node, position: existingNode.position } : node;
     });
 
-    set({
-      nodes: nodesWithPositions,
-      edges: initialEdges,
-    });
+    set({ nodes: nodesWithPositions, edges: initialEdges });
   },
 
+  // Editor markers management
   setMarkers: (markers) => {
     const { editorModel } = get();
     if (editorModel) {
@@ -133,36 +127,28 @@ export const useDBMLStore = create<DBMLState>((set, get) => ({
     }
   },
 
-  // Flow actions
+  // -------- Flow Actions --------
   setNodes: (nodes) => set({ nodes }),
-
   setEdges: (edges) => set({ edges }),
 
   onNodesChange: (changes) => {
-    set({
-      nodes: applyNodeChanges(changes, get().nodes),
-    });
+    set({ nodes: applyNodeChanges(changes, get().nodes) });
   },
 
   onEdgesChange: (changes) => {
-    set({
-      edges: applyEdgeChanges(changes, get().edges),
-    });
+    set({ edges: applyEdgeChanges(changes, get().edges) });
   },
 
   onConnect: (connection) => {
-    set({
-      edges: addEdge(
-        {
-          ...connection,
-          type: ConnectionLineType.SmoothStep,
-          animated: true,
-        },
-        get().edges
-      ),
-    });
+    const newEdge = {
+      ...connection,
+      type: ConnectionLineType.SmoothStep,
+      animated: true,
+    };
+    set({ edges: addEdge(newEdge, get().edges) });
   },
 
+  // Position management
   persistPositions: (storageKey) => {
     const positions = get().nodes.reduce(
       (acc, node) => ({
@@ -174,10 +160,15 @@ export const useDBMLStore = create<DBMLState>((set, get) => ({
     localStorage.setItem(storageKey, JSON.stringify(positions));
   },
 
+  loadSavedPositions: (storageKey) => {
+    const savedPositions = localStorage.getItem(storageKey);
+    return savedPositions ? JSON.parse(savedPositions) : {};
+  },
+
+  // Layout management
   onLayout: (direction, fitView) => {
     const { nodes: initialNodes, edges: initialEdges } =
       parseDatabaseToReactFlow(get().database!);
-
     const savedPositions = get().loadSavedPositions(
       getStorageKey(get().database!)
     );
@@ -199,23 +190,26 @@ export const useDBMLStore = create<DBMLState>((set, get) => ({
     get().onNodesChange(changes);
     get().persistPositions(getStorageKey(get().database!));
   },
-
-  loadSavedPositions: (storageKey) => {
-    const savedPositions = localStorage.getItem(storageKey);
-    return savedPositions ? JSON.parse(savedPositions) : {};
-  },
 }));
 
+// =============== Helper Functions ===============
+
+/**
+ * Converts a DBML database structure into React Flow nodes and edges
+ */
 const parseDatabaseToReactFlow = (database: Database) => {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
+  // Helper to find primary key field
   const findPrimaryKeyField = (table: any) => {
     const pkField = table.fields.find((field: any) => field.pk);
     return pkField ? pkField.name : "id";
   };
 
+  // Process each schema in the database
   database.schemas.forEach((schema) => {
+    // Create nodes for tables
     schema.tables.forEach((table) => {
       nodes.push({
         id: table.name,
@@ -233,6 +227,7 @@ const parseDatabaseToReactFlow = (database: Database) => {
       });
     });
 
+    // Create edges for relationships
     schema.refs?.forEach((ref: Ref, index) => {
       const source = ref.endpoints[0];
       const target = ref.endpoints[1];

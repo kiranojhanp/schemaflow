@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://github.com/kiranojhanp/schemaflow",
+  "homepage": "https://github.io/kiranojhanp/schemaflow",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

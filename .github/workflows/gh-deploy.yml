@@ -24,5 +24,8 @@ jobs:
     - name: Build React App
       run: bun run build
 
-    - name: Deploy to gh pages
-      run: bun run deploy
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./dist

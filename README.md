@@ -3,21 +3,7 @@
 ---
 
 ### Why the Pause?  
-I realized that **storing state in `localStorage`** provides little benefits as it limits the ability to **share charts and data online**. To overcome this, I’m focusing on building a **sync layer** on top of `zustand`.
-
----
-
-### 🚀 **What’s Next?**  
-1. **Sync Layer**: Convert to local-first app.  
-2. **Docker Distribution**: A `Dockerfile` for easy setup and deployment.  
-3. **One-Click Deployment**: Support for platforms like **Vercel**.
-
----
-
-### 💡 **Use Existing Features!**  
-Although new development is paused, you can still explore and enjoy the current functionality.
-
----
+I recognized the need for an open-source database markup language, which is why development efforts will now focus on [Yeti](https://github.com/kiranojhanp/yeti). Schemaflow will likely integrate with Yeti in the future to offer enhanced visualization capabilities for Yeti.
 
 ### 🛠️ **Stay Tuned for Updates**  
 Thanks for your patience—exciting improvements are on the way!
